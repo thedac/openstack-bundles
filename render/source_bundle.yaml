@@ -272,11 +272,14 @@ trusty-mitaka-staging:
 xenial-mitaka:
   inherits: openstack-icehouse
   series: xenial
+  overrides:
+    ha-bindiface: ens2
 xenial-mitaka-proposed:
   inherits: xenial-mitaka
   overrides:
     source: proposed
     openstack-origin: distro-proposed
+    ha-bindiface: ens2
 # newton
 xenial-newton:
   inherits: openstack-icehouse
@@ -284,11 +287,13 @@ xenial-newton:
   overrides:
     openstack-origin: cloud:xenial-newton
     source: cloud:xenial-newton
+    ha-bindiface: ens2
 xenial-newton-proposed:
   inherits: xenial-newton
   overrides:
     openstack-origin: cloud:xenial-newton/proposed
     source: cloud:xenial-newton/proposed
+    ha-bindiface: ens2
 # ocata
 xenial-ocata:
   inherits: openstack-icehouse
@@ -296,6 +301,9 @@ xenial-ocata:
   overrides:
     openstack-origin: cloud:xenial-ocata
     source: cloud:xenial-ocata
+    ha-bindiface: ens2
 zesty-ocata:
   inherits: openstack-icehouse
   series: zesty
+  overrides:
+    ha-bindiface: ens2
