@@ -1,3 +1,5 @@
 .local
 .tox
 *.swp
+*.pyc
+__pycache__
