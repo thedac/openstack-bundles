@@ -1,29 +1,8 @@
 #!/usr/bin/python
 
+import logging
 import yaml
-
-"""
-  nova-compute:
-    annotations:
-      gui-x: '250'
-      gui-y: '250'
-    charm: cs:nova-compute-264
-    num_units: 3
-    options:
-      enable-live-migration: true
-      enable-resize: true
-      migration-auth-type: ssh
-      openstack-origin: cloud:xenial-newton
-    to:
-    - '1'
-    - '2'
-    - '3'
-
-  overrides:
-          openstack-origin: cloud:xenial-ocata
-              source: cloud:xenial-ocata
-
-"""
+import common.control_data_common as control_data
 
 
 class InvalidSource(Exception):
@@ -41,6 +20,8 @@ class Charm(object):
         self.custom_url = False
         self.num_units = 1
         self.options = {}
+        self.constraints = None
+        self.origin = None
         self.SUPPORTED_SOURCES = ['stable', 'next', 'github']
         self.OPENSTACK_PROJECT = 'openstack'
         self.OPENSTACK_CHARM_PREFIX = 'charm-'
@@ -54,15 +35,11 @@ class Charm(object):
         return 'Charm Object: {}'.format(self.name)
 
     def _load_from_dict(self, charm_dict, update=False):
-        # TODO: if the originating bundle had the url arleady set
-        # this will raise InvalidSource
-        # Handle pre-existing urls
+        # TODO: handle yaml charm urls
+        # This sets the hammer custom_url which would be nice to keep for
+        # overrides only like mongodb
         if charm_dict[self.name].get('charm'):
-            if not charm_dict[self.name].get('charm') == self.name:
-                self.set_url(charm_dict[self.name].get('charm'))
-                # XXX: Sould we override here?
-            if update:
-                self.set_url(charm_dict[self.name].get('charm'))
+            self.set_url(charm_dict[self.name].get('charm'), custom_url=True)
         if charm_dict[self.name].get('num_units'):
             self.set_num_units(charm_dict[self.name].get('num_units'))
         if charm_dict[self.name].get('options'):
@@ -76,6 +53,7 @@ class Charm(object):
             self.set_constraints([charm_dict[self.name].get('constraints')])
 
     def _load_from_yaml(self):
+        # TODO
         pass
 
     def update_charm(self, charm_dict):
@@ -99,11 +77,6 @@ class Charm(object):
     def set_url(self, source='stable', series=None, proto='cs:', user=None,
                 branch=None, custom_url=False):
         """
-        cs:~thedac/xenial/ampq-client
-        cs:keystone
-        cs:xenial/kesystone
-        https://github.com/openstack/charm-keystone
-        https://github.com/thedac/charm-keystone
         """
         if custom_url:
             self.url = source
@@ -146,6 +119,54 @@ class Charm(object):
         charmstore_url.append(self.name)
 
         self.url = "{}{}".format(proto, "/".join(charmstore_url))
+
+    def set_origin(self, target, option='openstack-origin',
+                   custom_origin=False):
+        origin = None
+        series = None
+        release = None
+        pocket = None
+        # If custom set it directly
+        if custom_origin:
+            self.origin = target
+            return
+        splits = target.split('-')
+        if len(splits) == 2:
+            series, release = splits
+        elif len(splits) == 3:
+            series, release, pocket = splits
+        # Do not set origin if the release is native to the series
+        if (not pocket and
+                series in control_data.NATIVE_RELEASES.keys() and
+                release == control_data.NATIVE_RELEASES[series]):
+            logging.debug("{} is native to {}. Not setting origin."
+                          "".format(release, series))
+            self.origin = None
+            return
+
+        origin = 'cloud:{}-{}'.format(series, release)
+        if pocket:
+            origin = '{}/{}'.format(origin, pocket)
+
+        self.origin = origin
+        if (self.name in control_data.CHARMS_USE_ORIGIN or
+                control_data.SERVICE_TO_CHARM.get(self.name) in
+                control_data.CHARMS_USE_ORIGIN):
+            logging.debug("Use openstack-origin: {} for {}"
+                          "".format(self.origin, self.name))
+            self.update_options(**{'opentstack-origin': self.origin})
+        elif (self.name in control_data.CHARMS_USE_SOURCE or
+                control_data.SERVICE_TO_CHARM.get(self.name) in
+                control_data.CHARMS_USE_SOURCE):
+            logging.debug("Use source: {} for {}"
+                          "".format(self.origin, self.name))
+            self.update_options(**{'source': self.origin})
+        else:
+            logging.warn("{} not in CHARMS_USE_ORIGIN or CHARMS_USE_SOURCE"
+                         "".format(self.name))
+
+    def get_origin(self):
+        return self.origin
 
     def get_url(self):
         return self.url

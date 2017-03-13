@@ -28,6 +28,10 @@ from copy import deepcopy
 from jinja2 import Environment, FileSystemLoader
 
 
+class CharmHasNoSource(Exception):
+    pass
+
+
 def read_yaml(the_file):
     '''Returns yaml data from provided file name
 
@@ -253,9 +257,13 @@ def render_target_inheritance(bundle_dict, render_target):
         if 'overrides' in bundle_dict[target].keys():
             logging.debug('Inheriting overrides from {}'.format(target))
             for ovr_key, ovr_val in bundle_dict[target]['overrides'].items():
+                # Make sure all charms are represented
+                validate_charms_have_source(new_bundle['services'].keys())
                 for svc in new_bundle['services'].keys():
-                    if ovr_key in control_data.OVERRIDE_KEYS_MAP.keys() and \
-                            svc in control_data.OVERRIDE_KEYS_MAP[ovr_key]:
+                    if (ovr_key in control_data.OVERRIDE_KEYS_MAP.keys() and
+                            (svc in control_data.OVERRIDE_KEYS_MAP[ovr_key] or
+                             control_data.SERVICE_TO_CHARM.get(svc) in
+                             control_data.OVERRIDE_KEYS_MAP[ovr_key])):
                         logging.debug('Applying {} to {}'.format(ovr_key, svc))
                         if 'options' not in new_bundle['services'][svc].keys():
                             new_bundle['services'][svc]['options'] = {}
@@ -266,6 +274,35 @@ def render_target_inheritance(bundle_dict, render_target):
                         logging.debug('Ignoring {} for {}'.format(ovr_key,
                                                                   svc))
     return new_bundle
+
+
+def validate_charms_have_source(services):
+    ''' Validate the charm is in one of the following:
+        CHARMS_USE_ORIGIN,
+        CHARMS_USE_SOURCE,
+        CHARMS_USE_OTHER_SOURCE,
+        SUBORDINATE_CHARMS.
+    '''
+    if isinstance(services, str):
+        services = [services]
+    for service in services:
+        if ((service not in control_data.CHARMS_USE_ORIGIN and
+                service not in control_data.CHARMS_USE_SOURCE and
+                service not in control_data.SUBORDINATE_CHARMS and
+                service not in control_data.CHARMS_USE_OTHER_SOURCE and
+                service not in control_data.SERVICE_TO_CHARM.keys()) or
+                (service in control_data.SERVICE_TO_CHARM.keys() and
+                 control_data.SERVICE_TO_CHARM[service] not in
+                 control_data.CHARMS_USE_ORIGIN and
+                 control_data.SERVICE_TO_CHARM[service] not in
+                 control_data.CHARMS_USE_SOURCE and
+                 control_data.SERVICE_TO_CHARM[service] not in
+                 control_data.CHARMS_USE_OTHER_SOURCE)):
+
+            raise CharmHasNoSource("{} is not in CHARMS_USE_ORIGIN, "
+                                   "CHARMS_USE_SOURCE, SUBORDINATE_CHARMS or "
+                                   "CHARMS_USE_OTHER_SOURCE "
+                                   "It may need to be added".format(service))
 
 
 def extract_services(org_bundle_dict, svcs_include="ALL", svcs_exclude=None,

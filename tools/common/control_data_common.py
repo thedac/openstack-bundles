@@ -33,7 +33,7 @@ CHARMS_USE_SOURCE = [
 # Charms which use openstack-origin, ie. generally NOT subordinates
 CHARMS_USE_ORIGIN = [
     'ceilometer',
-    'ceilometer-agent'
+    'ceilometer-agent',
     'cinder',
     'glance',
     'heat',
@@ -47,7 +47,36 @@ CHARMS_USE_ORIGIN = [
     'swift-storage',
 ]
 
+# Subordinate charms
+SUBORDINATE_CHARMS = {
+    'neutron-openvswitch',
+    'ceilometer-agent',
+    'ntp',
+    'hacluster',
+}
+
+# Other sourced charms
+CHARMS_USE_OTHER_SOURCE = [
+    'tempest',
+]
+
+# Service to charm name
+SERVICE_TO_CHARM = {
+    'swift-storage-z1': 'swift-storage',
+    'swift-storage-z2': 'swift-storage',
+    'swift-storage-z3': 'swift-storage',
+}
+
 OVERRIDE_KEYS_MAP = {
     'source': CHARMS_USE_SOURCE,
     'openstack-origin': CHARMS_USE_ORIGIN
+}
+
+
+# No origin or source override
+NATIVE_RELEASES = {
+    'trusty': 'icehouse',
+    'xenial': 'mitaka',
+    'yakkety': 'newton',
+    'zesty': 'ocata',
 }
