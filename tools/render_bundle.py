@@ -15,7 +15,6 @@
 # limitations under the License.
 
 
-# TODO: Handle merge yaml files
 # TODO: -HA switch which adds the required elements
 
 import argparse
@@ -47,14 +46,6 @@ def get_yaml_dict(filename):
         logging.error("Not a file:", filename)
 
 
-def merge_overrides(args, charms, relations):
-    # TODO
-    for yamlfile in args.overrides:
-        # Like merge but use Charm.update(name, charm_dict=charm_dict)
-        pass
-    return charms, relations
-
-
 def get_args():
     parser = argparse.ArgumentParser(description=__doc__)
     group = parser.add_mutually_exclusive_group(required=True)
@@ -71,14 +62,14 @@ def get_args():
 
 
 def generate_bundle(args):
-    charms = []
+    charms = {}
 
     # Get charm objects
     for charm in BASE_CHARMS:
         charm_obj = Charm(charm)
         charm_obj.set_series(args.series)
         charm_obj.set_url(args.source)
-        charms.append(charm_obj)
+        charms[charm_obj.name] = charm_obj
 
     # Get relations
     relations = BASE_RELATIONS
@@ -89,12 +80,12 @@ def generate_bundle(args):
 def set_urls(args, charms):
     # Set urls based on args.source
     logging.info("Setting charm urls based on source.")
-    for charm in charms:
+    for charm in charms.values():
         charm.set_series(args.series)
         charm.set_url(args.source)
 
     # Check for location overrides
-    for charm in charms:
+    for charm in charms.values():
         if charm.name in LOCATION_OVERRIDES.keys():
             charm.set_url(LOCATION_OVERRIDES[charm.name],
                           custom_url=True)
@@ -106,14 +97,14 @@ def set_origin(args, charms):
     series, release = args.target.split('-')
     # Set origin based on target
     logging.info("Setting openstack-orgin and source based on target")
-    for charm in charms:
+    for charm in charms.values():
         if ((series not in control_data.NATIVE_RELEASES.keys()) or
                 release != control_data.NATIVE_RELEASES[series]):
             charm.set_origin(args.target)
 
 
 def get_bundle_from_yaml(args):
-    charms = []
+    charms = {}
     relations = []
     bundle_dict = get_yaml_dict(args.bundle)
 
@@ -135,10 +126,36 @@ def get_bundle_from_yaml(args):
     for charm in bundle_dict['services']:
         charm_obj = Charm(charm, charm_dict={charm:
                                              bundle_dict['services'][charm]})
-        charms.append(charm_obj)
+        charms[charm_obj.name] = charm_obj
 
     for relation in bundle_dict['relations']:
         relations.append(relation)
+
+    return charms, relations
+
+
+def merge_overrides(args, charms, relations):
+    for yamlfile in args.overrides:
+        bundle_dict = get_yaml_dict(yamlfile)
+        if 'services' in bundle_dict.keys():
+            logging.debug("Updating services from {}"
+                          "".format(yamlfile))
+            for charm in bundle_dict['services']:
+                if charm in charms.keys():
+                    charm_obj = charms[charm]
+                    charm_obj.update_charm({charm: bundle_dict['services'][charm]})
+                else:
+                    charm_obj = Charm(charm,
+                                      charm_dict={
+                                          charm:
+                                          bundle_dict['services'][charm]})
+                    charms[charm_obj.name] = charm_obj
+
+        if 'relations' in bundle_dict.keys():
+            logging.debug("Updating relations from {}"
+                          "".format(yamlfile))
+            for relation in bundle_dict['relations']:
+                relations.append(relation)
 
     return charms, relations
 
@@ -147,7 +164,7 @@ def get_bundle_dict(charms, relations,
                     machines=None, networks=None):
     bundle_dict = {'services': {}, 'relations': {}}
 
-    for charm in charms:
+    for charm in charms.values():
         bundle_dict['services'][charm.name] = charm.get_dict()[charm.name]
 
     bundle_dict['relations'] = relations

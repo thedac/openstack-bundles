@@ -36,9 +36,14 @@ class Charm(object):
 
     def _load_from_dict(self, charm_dict, update=False):
         # TODO: handle yaml charm urls
-        # This sets the hammer custom_url which would be nice to keep for
+        # This uses the hammer custom_url which would be nice to keep for
         # overrides only like mongodb
+        print("CHARM_DICT:", charm_dict)
         if charm_dict[self.name].get('charm'):
+            logging.warn("Overriding charm url to {}. This may not be the "
+                         "expected result. Run charm.set_url() to configure "
+                         "expected url."
+                         "".format(charm_dict[self.name].get('charm')))
             self.set_url(charm_dict[self.name].get('charm'), custom_url=True)
         if charm_dict[self.name].get('num_units'):
             self.set_num_units(charm_dict[self.name].get('num_units'))
