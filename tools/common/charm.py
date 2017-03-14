@@ -38,7 +38,6 @@ class Charm(object):
         # TODO: handle yaml charm urls
         # This uses the hammer custom_url which would be nice to keep for
         # overrides only like mongodb
-        print("CHARM_DICT:", charm_dict)
         if charm_dict[self.name].get('charm'):
             logging.warn("Overriding charm url to {}. This may not be the "
                          "expected result. Run charm.set_url() to configure "
