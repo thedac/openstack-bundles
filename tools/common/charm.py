@@ -163,7 +163,7 @@ class Charm(object):
                 control_data.CHARMS_USE_ORIGIN):
             logging.debug("Use openstack-origin: {} for {}"
                           "".format(self.origin, self.name))
-            self.update_options(**{'opentstack-origin': self.origin})
+            self.update_options(**{'openstack-origin': self.origin})
         elif (self.name in control_data.CHARMS_USE_SOURCE or
                 control_data.SERVICE_TO_CHARM.get(self.name) in
                 control_data.CHARMS_USE_SOURCE):
