@@ -59,6 +59,8 @@ class Charm(object):
             self.set_placement([charm_dict[self.name].get('to')])
         if charm_dict[self.name].get('constraints'):
             self.set_constraints([charm_dict[self.name].get('constraints')])
+        if charm_dict[self.name].get('series'):
+            self.set_series([charm_dict[self.name].get('series')])
 
     def _load_from_yaml(self):
         # TODO
