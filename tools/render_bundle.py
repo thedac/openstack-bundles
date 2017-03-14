@@ -190,14 +190,17 @@ def main():
     else:
         charms, relations = get_bundle_from_yaml(args)
 
-    # Merge
-    if args.overrides:
-        charms, relations = merge_overrides(args, charms, relations)
-
     # Set urls based on args.source
     set_urls(args, charms)
     # Set openstack-origin and source
     set_origin(args, charms)
+
+    # Merge override yaml files
+    # Note: This merge happens last so these are truly overrides
+    # New charms and relations can be added
+    # Options, urls and origin can all be overriden
+    if args.overrides:
+        charms, relations = merge_overrides(args, charms, relations)
 
     write_bundle(args, get_bundle_dict(charms, relations))
 
