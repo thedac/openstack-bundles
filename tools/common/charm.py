@@ -13,10 +13,14 @@ class Charm(object):
 
     def __init__(self, name, charm_dict={}):
         self.name = name
+        # This is provisional
+        # It may be an alias like swift-storage-z2
+        # It will be corrected in self.set_url()
+        self.charm = self.name
         self.series = None
         # Defaults
         self.source = 'stable'
-        self.url = 'cs:{}'.format(self.name)
+        self.url = 'cs:{}'.format(self.charm)
         self.custom_url = False
         self.num_units = 1
         self.options = {}
@@ -80,8 +84,6 @@ class Charm(object):
 
     def set_url(self, source='stable', series=None, proto='cs:', user=None,
                 branch=None, custom_url=False):
-        """
-        """
         if custom_url:
             self.url = source
             self.custom_url = True
@@ -92,17 +94,20 @@ class Charm(object):
             raise InvalidSource("{} is not a valid source. Valid sources are: "
                                 "stable, next or github".format(source))
 
+        if self.name in control_data.SERVICE_TO_CHARM.keys():
+            self.charm = control_data.SERVICE_TO_CHARM[self.name]
+
         if source == 'github':
             if user:
                 self.url = "git://github.com/{}/{}{}".format(
                         user,
                         self.OPENSTACK_CHARM_PREFIX,
-                        self.name)
+                        self.charm)
             else:
                 self.url = "git://github.com/{}/{}{}".format(
                         self.OPENSTACK_PROJECT,
                         self.OPENSTACK_CHARM_PREFIX,
-                        self.name)
+                        self.charm)
             return
 
         charmstore_url = []
@@ -120,7 +125,7 @@ class Charm(object):
             series = self.get_series()
             charmstore_url.append(series)
 
-        charmstore_url.append(self.name)
+        charmstore_url.append(self.charm)
 
         self.url = "{}{}".format(proto, "/".join(charmstore_url))
 

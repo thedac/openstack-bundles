@@ -143,7 +143,8 @@ def merge_overrides(args, charms, relations):
             for charm in bundle_dict['services']:
                 if charm in charms.keys():
                     charm_obj = charms[charm]
-                    charm_obj.update_charm({charm: bundle_dict['services'][charm]})
+                    charm_obj.update_charm({charm:
+                                            bundle_dict['services'][charm]})
                 else:
                     charm_obj = Charm(charm,
                                       charm_dict={

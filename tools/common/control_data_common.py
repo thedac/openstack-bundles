@@ -65,6 +65,7 @@ SERVICE_TO_CHARM = {
     'swift-storage-z1': 'swift-storage',
     'swift-storage-z2': 'swift-storage',
     'swift-storage-z3': 'swift-storage',
+    'mysql': 'percona-cluster',
 }
 
 OVERRIDE_KEYS_MAP = {
