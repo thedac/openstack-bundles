@@ -55,7 +55,7 @@ openstack-services:
       options:
         block-device: "None"
         glance-api-version: 2
-      constraints": mem=1G
+      constraints: mem=1G
     glance:
       charm: cs:~openstack-charmers-next/glance
       constraints: mem=1G

@@ -15,7 +15,8 @@
 # limitations under the License.
 
 
-# TODO: -HA switch which adds the required elements
+# TODO: Query charmstore for subordinate
+# TODO: Query charmstore for openstack-origin vs source
 
 import argparse
 import logging
@@ -23,6 +24,7 @@ import os
 import yaml
 
 from common.charm import Charm
+from common.charm_store import cs_query
 from common.tools_common import render_target_inheritance
 import common.control_data_common as control_data
 from common.base_constants import (
@@ -49,15 +51,43 @@ def get_yaml_dict(filename):
 def get_args():
     parser = argparse.ArgumentParser(description=__doc__)
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument('-b', '--bundle')
-    group.add_argument('-g', '--generate', action='store_true')
-    parser.add_argument('-o', '--overrides', nargs='*')
-    parser.add_argument('-d', '--destination', default="rendered.yaml")
-    parser.add_argument('-s', '--series', default="xenial")
-    parser.add_argument('-r', '--release', default="mitaka")
-    parser.add_argument('-src', '--source', default="stable")
-    parser.add_argument('-t', '--target')
-    parser.add_argument('-l', '--log_level', default="INFO")
+    group.add_argument(
+            '-b', '--bundle',
+            help="Source bundle YAML file to manipulate")
+    group.add_argument(
+            '-g', '--generate', action='store_true',
+            help="Alpha: Generate base bundle from scratch")
+    parser.add_argument(
+            '-o', '--overrides', nargs='*',
+            help="One or more override YAML files in ascending order of "
+                 "signficance. The last file in the list is most significant ")
+    parser.add_argument(
+            '-d', '--destination', default="rendered.yaml",
+            help="Destination YAML file for the rendered bundle. "
+                 "Default: rendered.yaml")
+    parser.add_argument(
+            '-s', '--series', default="xenial",
+            help="Series for the model")
+    parser.add_argument(
+            '-r', '--release', default="mitaka",
+            help="OpenStack release for the model")
+    parser.add_argument(
+            '-src', '--source', default="stable",
+            choices=['stable', 'next', 'github'],
+            help="Source to pull charms from. Stable and next are the "
+                 "charmstore. Github will pull dirrectly from the repo. "
+                 "Default: stable")
+    parser.add_argument(
+            '-t', '--target',
+            help="Target in the YAML bundle. i.e. xenial-mitaka or "
+            "trusty-liberty-proposed.")
+    parser.add_argument(
+            '-ha', '--high-availability', action='store_true',
+            help="Add High Availability to all HA capable charms.")
+    parser.add_argument(
+            '-l', '--log_level', default="INFO",
+            choices=['DEBUG', 'INFO', 'WARN',  'ERROR'],
+            help="Set logging level")
     return parser.parse_args()
 
 
@@ -182,6 +212,42 @@ def set_log_level(args):
     logging.basicConfig(level=args.log_level.upper())
 
 
+def add_ha(args, charms, relations):
+    # TODO read vips
+    ha_charms = []
+    non_ha_charms = []
+    for charm in charms.values():
+        if (charm.url.startswith('cs:') and
+                charm.charm not in control_data.HA_EXCEPTIONS and
+                charm.charm not in control_data.SUBORDINATE_CHARMS and
+                (charm.charm not in ha_charms or
+                 charm.charm not in non_ha_charms)):
+            charm_metadata = cs_query(charm.charm, charm.series,
+                                      'charm-metadata')
+            if (charm_metadata and charm_metadata.get('Requires') and
+                    charm_metadata.get('Requires').get('ha')):
+                logging.debug("{} is HA capable".format(charm.charm))
+                ha_charms.append(charm)
+            else:
+                logging.debug("{} is NOT HA capable".format(charm.charm))
+                non_ha_charms.append(charm)
+        else:
+            logging.debug("Skipping {} at {}".format(charm.charm, charm.url))
+    for charm in ha_charms:
+        # Update number of units
+        charm.set_num_units(3)
+        # Add hacluster for all the HA charms
+        charm_obj = Charm("hacluster-{}".format(charm.charm))
+        charm_obj.set_series(args.series)
+        charm_obj.set_url(args.source)
+        charm_obj.set_num_units(0)
+        charms[charm_obj.name] = charm_obj
+        # Add relations for hacluster
+        relations.append([charm.name, charm_obj.name])
+
+    return charms, relations
+
+
 def main():
     args = get_args()
     set_log_level(args)
@@ -195,6 +261,10 @@ def main():
     set_urls(args, charms)
     # Set openstack-origin and source
     set_origin(args, charms)
+
+    # Setup High Availability
+    if args.high_availability:
+        charms, relations = add_ha(args, charms, relations)
 
     # Merge override yaml files
     # Note: This merge happens last so these are truly overrides

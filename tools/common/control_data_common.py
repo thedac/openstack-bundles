@@ -66,6 +66,15 @@ SERVICE_TO_CHARM = {
     'swift-storage-z2': 'swift-storage',
     'swift-storage-z3': 'swift-storage',
     'mysql': 'percona-cluster',
+    'hacluster-ceilometer': 'hacluster',
+    'hacluster-cinder': 'hacluster',
+    'hacluster-glance': 'hacluster',
+    'hacluster-keystone': 'hacluster',
+    'hacluster-neutron-api': 'hacluster',
+    'hacluster-nova-cloud-controller': 'hacluster',
+    'hacluster-openstack-dashboard': 'hacluster',
+    'hacluster-percona-cluster': 'hacluster',
+    'hacluster-swift-proxy': 'hacluster',
 }
 
 OVERRIDE_KEYS_MAP = {
@@ -81,3 +90,10 @@ NATIVE_RELEASES = {
     'yakkety': 'newton',
     'zesty': 'ocata',
 }
+
+
+# Charms with an ha relation but which we do not want hacluster
+HA_EXCEPTIONS = [
+    'rabbitmq-server',
+    'neutron-gateway',
+]

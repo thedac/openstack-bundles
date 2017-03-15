@@ -74,6 +74,8 @@ class Charm(object):
                            'num_units': self.get_num_units()}
         if self.get_series():
             charm_attr_dict['series'] = self.get_series()
+        if self.get_constraints():
+            charm_attr_dict['constraints'] = self.get_constraints()
         if self.get_options():
             charm_attr_dict['options'] = self.get_options()
         if self.get_placement():
@@ -217,4 +219,8 @@ class Charm(object):
         pass
 
     def set_constraints(self, constraints):
-        self.constraints
+        self.constraints = constraints
+
+    def get_constraints(self):
+        if self.constraints:
+            return " ".join(self.constraints)
