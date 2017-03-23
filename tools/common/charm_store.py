@@ -6,11 +6,10 @@ import urllib3
 import yaml
 
 VERSION = 'v5'
-API_URL = "https://api.jujucharms.com/{}/{}/{}/meta/id-revision"
 API_URL = "https://api.jujucharms.com/charmstore/{}/{}/{}/meta/{}"
 
 
-def cs_query(charm, series, uri='meta'):
+def cs_query(charm, series, uri=''):
     """ Query the charm store
 
     :param: charm: Name of charm in the charms store
@@ -55,8 +54,9 @@ def cs_query(charm, series, uri='meta'):
     if result.status == 200:
         return yaml.load(result.data)
     else:
-        logging.error("FAILED to query: charm: {}, series {}, uri: {}, result:{}".format(charm, series, uri, result.status))
-
+        logging.error("FAILED to query: charm: {}, series {}, uri: {}, "
+                      "result:{}".format(charm, series, uri, result.status))
+        return {}
 
 if __name__ == "__main__":
     pprint(cs_query('neutron-api', 'xenial', uri='charm-metadata'))
